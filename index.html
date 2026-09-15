@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dino Battle Adventure V2</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#86d7f5;color:#18220f}
+header{background:#315d2b;color:white;padding:12px 18px;position:sticky;top:0;z-index:5;box-shadow:0 3px 12px #0004}
+.header{max-width:1150px;margin:auto;display:flex;gap:15px;align-items:center;justify-content:space-between}.brand{font-size:24px;font-weight:800}
+.stats{display:flex;gap:9px;flex-wrap:wrap}.pill{background:#234720;padding:7px 10px;border-radius:20px}
+main{max-width:1150px;margin:auto;padding:16px}.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+button{border:0;border-radius:10px;padding:9px 13px;background:#477e35;color:#fff;font-weight:700;cursor:pointer}button:hover{filter:brightness(1.08)}button:disabled{opacity:.45;cursor:not-allowed}
+.tab{background:#fff;color:#315d2b;border:2px solid #315d2b}.tab.active{background:#315d2b;color:#fff}
+.panel{background:#ffffffe8;border:3px solid #315d2b;border-radius:18px;padding:15px;box-shadow:0 8px 22px #0002;margin-bottom:14px}
+.hidden{display:none}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:11px}
+.card{background:#f4f9ef;border:2px solid #a6bd91;border-radius:15px;padding:11px;text-align:center}.emoji{font-size:58px;display:block}.card.selected{outline:4px solid #e6a62c}
+.small{font-size:13px;color:#52624a}.tag{display:inline-block;padding:3px 7px;border-radius:8px;background:#dfeecf;margin:2px;font-size:12px}
+#battle{background:linear-gradient(#9ee1ff 0 60%,#78bd4f 60%);overflow:hidden}
+.arena{height:520px;position:relative;border-radius:15px;overflow:hidden;border:3px solid #315d2b}
+.platform{position:absolute;width:330px;height:65px;border-radius:50%;background:#57983c;bottom:82px;box-shadow:inset 0 8px #8bce64}
+.left{left:45px}.right{right:45px}
+.fighter{position:absolute;font-size:100px;bottom:112px;transition:.25s;filter:drop-shadow(0 9px 3px #0003)}
+.player{left:125px}.enemy{right:125px}
+.idle{animation:bob 1.3s ease-in-out infinite}.attack{animation:attack .45s}.hit{animation:hit .45s}
+@keyframes bob{50%{transform:translateY(-13px)}}@keyframes attack{50%{transform:translateX(90px) rotate(-8deg)}}@keyframes hit{25%,75%{transform:translateX(14px)}}
+.info{position:absolute;background:#ffffffdf;border:2px solid #315d2b;border-radius:13px;padding:9px;width:270px}.pinfo{left:28px;top:22px}.einfo{right:28px;top:22px}
+.hp{height:17px;background:#ddd;border:1px solid #333;border-radius:10px;overflow:hidden}.hp i{display:block;height:100%;background:#45a747}.hp.low i{background:#dfaa32}.hp.crit i{background:#d34c39}
+.battlelog{position:absolute;left:50%;transform:translateX(-50%);bottom:20px;background:#fff;padding:9px 15px;border:2px solid #315d2b;border-radius:12px;width:min(90%,700px);text-align:center;font-weight:700}
+.moves{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.move{background:#684f9b}.move.fire{background:#bd6a28}.move.leaf{background:#438d4b}.move.water{background:#3d7eae}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;z-index:20}.modalbox{background:white;border-radius:18px;padding:22px;max-width:500px;text-align:center;border:4px solid #315d2b}
+h1,h2,h3{margin-top:4px}.center{text-align:center}
+@media(max-width:650px){.fighter{font-size:72px}.player{left:50px}.enemy{right:50px}.platform{width:220px}.left{left:15px}.right{right:15px}.info{width:220px;font-size:13px}}
+</style>
+</head>
+<body>
+<header><div class="header"><div class="brand">🦖 Dino Battle Adventure</div><div class="stats"><span class="pill">🪙 <b id="coins">0</b></span><span class="pill">⭐ Level <b id="level">1</b></span><span class="pill">🥚 Eggs <b id="eggs">0</b></span></div></div></header>
+<main>
+<div class="tabs">
+<button class="tab active" onclick="show('home',this)">🏕️ Camp</button>
+<button class="tab" onclick="show('collection',this)">🧬 Dinodex</button>
+<button class="tab" onclick="show('shop',this)">🛒 Shop</button>
+<button class="tab" onclick="show('battle',this)">⚔️ Battle</button>
+</div>
+
+<section id="home" class="panel">
+<h1>Your Dino Camp</h1>
+<p>Breed, hatch eggs, train your dinosaurs, and challenge increasingly powerful opponents.</p>
+<div class="grid" id="camp"></div>
+<hr>
+<h3>🥚 Egg Hatchery</h3><div id="eggBox"></div>
+</section>
+
+<section id="collection" class="panel hidden">
+<h2>🧬 Dinodex</h2><p class="small">Choose two compatible dinosaurs to breed. Hybrids inherit traits from both parents.</p>
+<div class="grid" id="parents"></div>
+<div class="center"><button onclick="makeEgg()">🥚 Breed Selected Dinosaurs</button></div>
+<h3>Your Dinosaurs</h3><div class="grid" id="dinos"></div>
+</section>
+
+<section id="shop" class="panel hidden">
+<h2>🛒 Dino Shop</h2><div class="grid" id="shopItems"></div>
+</section>
+
+<section id="battle" class="panel hidden">
+<h2>⚔️ Dino Battle Arena</h2>
+<div class="center" id="battleTop"></div>
+<div class="arena">
+ <div class="platform left"></div><div class="platform right"></div>
+ <div class="info pinfo" id="pInfo"></div><div class="info einfo" id="eInfo"></div>
+ <div id="pFighter" class="fighter player idle">🦖</div><div id="eFighter" class="fighter enemy idle">🦕</div>
+ <div class="battlelog" id="battleLog">Choose a battle.</div>
+</div>
+<div class="moves" id="moves"></div>
+<div class="center" style="margin-top:9px"><button onclick="nextBattle()">🚪 Choose Battle</button></div>
+</section>
+</main>
+<div id="modal" class="modal hidden"><div class="modalbox" id="modalBox"></div></div>
+
+<script>
+const species=[
+{name:"Rex",emoji:"🦖",type:"Fire",hp:105,atk:23,def:9,spd:11,moves:[["Bite","normal",22],["Flame Roar","fire",30]]},
+{name:"Triceratops",emoji:"🦕",type:"Earth",hp:130,atk:17,def:15,spd:7,moves:[["Horn Charge","normal",20],["Rock Crash","earth",29]]},
+{name:"Raptor",emoji:"🦎",type:"Wind",hp:82,atk:27,def:6,spd:17,moves:[["Claw Rush","normal",23],["Wind Slash","wind",31]]},
+{name:"Stegosaurus",emoji:"🦕",type:"Leaf",hp:122,atk:16,def:16,spd:8,moves:[["Tail Smash","normal",21],["Leaf Storm","leaf",30]]},
+{name:"Spinosaurus",emoji:"🐊",type:"Water",hp:118,atk:24,def:10,spd:12,moves:[["Jaw Snap","normal",24],["Water Blast","water",33]]},
+{name:"Ankylosaurus",emoji:"🦕",type:"Earth",hp:140,atk:19,def:19,spd:5,moves:[["Club Hit","normal",21],["Boulder Bash","earth",34]]}
+];
+const bosses=[
+{name:"MEGA REX",emoji:"🦖",type:"Fire",hp:190,atk:31,def:14,spd:13,moves:[["Mega Bite","normal",30],["Volcanic Roar","fire",46]]},
+{name:"ANCIENT SPINO",emoji:"🐊",type:"Water",hp:220,atk:29,def:17,spd:10,moves:[["Tidal Bite","normal",31],["Ancient Wave","water",48]]}
+];
+let game={coins:350,eggs:1,level:1,selected:[],dinos:[]};
+let battleState=null;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("dinoV2",JSON.stringify(game));}
+function load(){
+ try{let x=JSON.parse(localStorage.getItem("dinoV2"));if(x)game=x}catch(e){}
+ if(!game.dinos.length) game.dinos=[newDino(species[0]),newDino(species[2]),newDino(species[1])];
+}
+function newDino(s,bonus=0){return {uid:Date.now()+Math.random(),name:s.name,emoji:s.emoji,type:s.type,maxhp:s.hp+bonus,hp:s.hp+bonus,atk:s.atk+Math.floor(bonus/10),def:s.def,spd:s.spd,moves:s.moves,xp:0,level:1}}
+function show(id,btn){document.querySelectorAll("main>section").forEach(x=>x.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));btn.classList.add("active");render()}
+function render(){
+ $("coins").textContent=game.coins;$("eggs").textContent=game.eggs;$("level").textContent=game.level;
+ $("camp").innerHTML=game.dinos.slice(0,6).map(d=>mini(d)).join("");
+ $("dinos").innerHTML=game.dinos.map(d=>mini(d,true)).join("");
+ $("parents").innerHTML=game.dinos.map(d=>`<div class="card ${game.selected.includes(d.uid)?"selected":""}" onclick="selectParent('${d.uid}')"><span class="emoji">${d.emoji}</span><b>${d.name}</b><br><span class="tag">${d.type}</span><br>❤️ ${d.hp}/${d.maxhp} • ⚔️ ${d.atk}<br>⭐ Lv.${d.level}</div>`).join("");
+ $("eggBox").innerHTML=game.eggs?`<div class="card"><span class="emoji">🥚</span><b>${game.eggs} egg(s) ready!</b><br><button onclick="hatch()">Hatch Egg</button></div>`:`<p>No eggs. Breed two dinosaurs or buy an egg in the shop.</p>`;
+ $("shopItems").innerHTML=`
+ <div class="card"><span class="emoji">🥚</span><h3>Mystery Egg</h3><p>May hatch a rare dinosaur.</p><button onclick="buyEgg()">Buy — 150 🪙</button></div>
+ <div class="card"><span class="emoji">🍖</span><h3>Power Feed</h3><p>+12 max HP and +2 attack.</p><button onclick="feed()">Buy — 100 🪙</button></div>
+ <div class="card"><span class="emoji">⚡</span><h3>Speed Charm</h3><p>+3 speed to a random dino.</p><button onclick="speedCharm()">Buy — 120 🪙</button></div>`;
+}
+function mini(d,full=false){return `<div class="card"><span class="emoji">${d.emoji}</span><b>${d.name}</b><br><span class="tag">${d.type}</span><br>⭐ Lv.${d.level} • ❤️ ${d.hp}/${d.maxhp}<br>⚔️ ${d.atk} • 🛡️ ${d.def} • 💨 ${d.spd}${full?`<br><button onclick="train('${d.uid}')">Train (80 🪙)</button>`:""}</div>`}
+function selectParent(uid){uid=Number(uid);if(game.selected.includes(uid))game.selected=game.selected.filter(x=>x!==uid);else if(game.selected.length<2)game.selected.push(uid);render()}
+function makeEgg(){
+ if(game.selected.length!==2)return alert("Choose two dinosaurs first!");
+ if(game.eggs>=5)return alert("Your hatchery is full.");
+ game.eggs++;game.selected=[];save();render();alert("🥚 A new egg is ready to hatch!");
+}
+function hatch(){
+ if(!game.eggs)return;
+ game.eggs--;let s=species[Math.floor(Math.random()*species.length)],rare=Math.random()<.18;
+ let d=newDino(s,rare?20:0);if(rare)d.name="Rare "+d.name;game.dinos.push(d);save();render();alert(`🎉 Your egg hatched into ${d.name}!`);
+}
+function breedHybrid(){
+ if(game.selected.length!==2)return;
+}
+function buyEgg(){if(game.coins<150)return alert("Not enough coins!");game.coins-=150;game.eggs++;save();render()}
+function feed(){if(game.coins<100||!game.dinos.length)return alert("Not enough coins!");game.coins-=100;let d=game.dinos[Math.floor(Math.random()*game.dinos.length)];d.maxhp+=12;d.hp=d.maxhp;d.atk+=2;save();render();alert(`${d.name} loved the power feed!`)}
+function speedCharm(){if(game.coins<120)return alert("Not enough coins!");game.coins-=120;let d=game.dinos[Math.floor(Math.random()*game.dinos.length)];d.spd+=3;save();render();alert(`${d.name} got faster!`)}
+function train(uid){if(game.coins<80)return alert("Not enough coins!");let d=game.dinos.find(x=>x.uid==uid);game.coins-=80;d.xp+=25;d.atk+=1;if(d.xp>=50){d.level++;d.xp=0;d.maxhp+=8;d.hp=d.maxhp;d.def++;alert(`${d.name} leveled up! ⭐`)}save();render()}
+function nextBattle(){
+ if(game.dinos.length<1)return;
+ let choices=game.level%5===0?bosses:[...species];
+ let e=JSON.parse(JSON.stringify(choices[Math.floor(Math.random()*choices.length)]));
+ let scale=1+(game.level-1)*.12;e.maxhp=e.hp=Math.round(e.hp*scale);e.atk=Math.round(e.atk*scale);e.def=Math.round(e.def*scale);
+ battleState={p:JSON.parse(JSON.stringify(game.dinos[0])),e:e,turn:null,over:false};
+ showBattle();setLog(`A wild ${e.name} appears! Choose a move.`);
+}
+function showBattle(){document.querySelectorAll("main>section").forEach(x=>x.classList.add("hidden"));$("battle").classList.remove("hidden");renderBattle()}
+function renderBattle(){
+ if(!battleState)return;
+ let p=battleState.p,e=battleState.e;
+ $("pFighter").textContent=p.emoji;$("eFighter").textContent=e.emoji;
+ $("pInfo").innerHTML=`<b>${p.name}</b> ⭐ Lv.${p.level||1}<br>❤️ ${p.hp}/${p.maxhp}<div class="hp ${p.hp<p.maxhp*.25?'crit':p.hp<p.maxhp*.5?'low':''}"><i style="width:${Math.max(0,p.hp/p.maxhp*100)}%"></i></div>`;
+ $("eInfo").innerHTML=`<b>${e.name}</b><br>❤️ ${e.hp}/${e.maxhp}<div class="hp ${e.hp<e.maxhp*.25?'crit':e.hp<e.maxhp*.5?'low':''}"><i style="width:${Math.max(0,e.hp/e.maxhp*100)}%"></i></div>`;
+ $("moves").innerHTML=p.moves.map((m,i)=>`<button class="move ${m[1]}" onclick="useMove(${i})" ${battleState.over?"disabled":""}>${m[0]}<br>⚔️ ${m[2]}</button>`).join("");
+ $("battleTop").innerHTML=`<b>Level ${game.level}</b> — ${game.level%5===0?"👑 BOSS BATTLE":"Wild Encounter"}`;
+}
+function typeBonus(a,b){if(a==="fire"&&b==="leaf"||a==="water"&&b==="fire"||a==="leaf"&&b==="water"||a==="wind"&&b==="water")return 1.35;if(a==="earth"&&b==="wind")return 1.25;return 1}
+function useMove(i){
+ if(battleState.over)return;let p=battleState.p,e=battleState.e,m=p.moves[i];
+ let dmg=Math.max(5,Math.round((m[2]+p.atk*.45-e.def*.3)*typeBonus(m[1],e.type.toLowerCase())));e.hp-=dmg;
+ animate("pFighter","attack");setLog(`${p.name} used ${m[0]}! ${dmg} damage!`);renderBattle();
+ if(e.hp<=0)return winBattle();
+ setTimeout(enemyMove,700);
+}
+function enemyMove(){
+ if(battleState.over)return;let p=battleState.p,e=battleState.e,m=e.moves[Math.floor(Math.random()*e.moves.length)];
+ let dmg=Math.max(5,Math.round((m[2]+e.atk*.4-p.def*.3)*typeBonus(m[1],p.type.toLowerCase())));p.hp-=dmg;
+ animate("eFighter","attack");setLog(`${e.name} used ${m[0]}! ${dmg} damage!`);renderBattle();
+ if(p.hp<=0)loseBattle();
+}
+function animate(id,c){let x=$(id);x.classList.remove("attack","hit");void x.offsetWidth;x.classList.add(c);setTimeout(()=>x.classList.remove(c),500)}
+function setLog(x){$("battleLog").textContent=x}
+function winBattle(){
+ battleState.over=true;let reward=100+game.level*35;game.coins+=reward;
+ game.level++;let d=game.dinos.find(x=>x.name===battleState.p.name);if(d){d.xp+=30;d.hp=d.maxhp}
+ save();renderBattle();setLog(`🏆 Victory! You earned ${reward} coins. Your adventure is now Level ${game.level}!`);
+}
+function loseBattle(){battleState.over=true;setLog("💥 Your dinosaur fainted! Train it and try again.");}
+load();render();
+</script>
+</body>
+</html>
